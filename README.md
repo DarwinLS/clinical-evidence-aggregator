@@ -1,4 +1,4 @@
-# Clinical Evidence Aggregator (MVP)
+# Clinical Evidence Synthesis Engine (MVP)
 
 A structured, evidence-based research platform that aggregates clinical studies on supplements and wellness. This system generates transparent, demographic-specific summaries using verified data.
 
