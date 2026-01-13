@@ -9,15 +9,16 @@ load_dotenv()
 Entrez.email = os.getenv("EMAIL", "your_email@example.com") 
 Entrez.tool = "ClinicalSynthMVP"
 
+"""
+Step 1: Get the PMIDs of relevant studies
+Query Strategy:
+- Search for the supplement name
+- Filter for 'Clinical Trial' or 'Randomized Controlled Trial'
+- Filter for 'Humans'
+- Language: English
+"""
 def search_pubmed(supplement: str, max_results: int = 20):
-    """
-    Step 1: Get the PMIDs (IDs) of relevant studies
-    Query Strategy:
-    - Search for the supplement name
-    - Filter for 'Clinical Trial' or 'Randomized Controlled Trial'
-    - Filter for 'Humans'
-    - Language: English
-    """
+    
     search_term = (
         f"{supplement} AND "
         "(Clinical Trial[Publication Type] OR Randomized Controlled Trial[Publication Type]) "
@@ -47,10 +48,11 @@ def search_pubmed(supplement: str, max_results: int = 20):
         print(f"Error searching PubMed: {e}")
         return []
 
+"""
+Step 2: Given a list of IDs, fetch the actual Title, Abstract, and Metadata
+"""
 def fetch_details(id_list):
-    """
-    Step 2: Given a list of IDs, fetch the actual Title, Abstract, and Metadata
-    """
+
     ids = ",".join(id_list)
     
     try:
