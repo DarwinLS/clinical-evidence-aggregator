@@ -5,31 +5,30 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Initialize the client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 """
-Step 3 - Worker LLM:
-Takes a list of raw study dictionaries,
-Returns a list of structured JSON objects with Age, N, and Design
-"""
+    Step 3 - Worker LLM:
+    Takes raw studies, extracts metadata, AND preserves original title/abstract
+    """
 def extract_metadata(studies):
+
     if not studies:
         return []
 
     print(f"DEBUG: Extracting metadata for {len(studies)} studies...")
 
-    # Prepare the input as a clean JSON string to save tokens
+    # 1. Prepare input for LLM (truncate to save tokens)
     studies_input = [
         {
             "id": s["id"], 
             "title": s["title"], 
-            "abstract": s["abstract"][:2000] # Truncate abstracts to save costs
+            "abstract": s["abstract"][:2000] 
         } 
         for s in studies
     ]
 
-    # System Prompt: strict instructions on how to extract data
+    # 2. System Prompt
     system_prompt = """
     You are a clinical data extraction engine. You will receive a JSON list of clinical abstracts.
     For EACH abstract, return a structured JSON object with these exact keys:
@@ -49,20 +48,34 @@ def extract_metadata(studies):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini", # current optimal cheap/fast model
+            model="gpt-4o-mini", 
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": json.dumps(studies_input)}
             ],
-            response_format={ "type": "json_object" }, # Forces valid JSON
-            temperature=0 # Makes model deterministic
+            response_format={ "type": "json_object" }, 
+            temperature=0 
         )
 
-        # Parse result
+        # 3. Parse LLM Output
         raw_json = response.choices[0].message.content
         parsed_data = json.loads(raw_json)
+        extracted_list = parsed_data.get("extracted_studies", [])
+
+        # LLM output doesn't have the title, add it back
+        # Create a lookup dictionary for the original studies
+        original_lookup = {s["id"]: s for s in studies}
         
-        return parsed_data.get("extracted_studies", [])
+        final_studies = []
+        for item in extracted_list:
+            original = original_lookup.get(item["id"])
+            if original:
+                # Merge the LLM data (item) into the original data (original)
+                # ensures 'title' and 'abstract' are preserved
+                merged = {**original, **item} 
+                final_studies.append(merged)
+        
+        return final_studies
 
     except Exception as e:
         print(f"Error in extraction: {e}")
@@ -70,20 +83,21 @@ def extract_metadata(studies):
 
 # Test Block
 if __name__ == "__main__":
-    # Mock data to test ONLY this file without hitting PubMed
+    # Mock data with a Title
     mock_studies = [
         {
             "id": "111",
             "title": "Creatine supplementation in young soccer players",
-            "abstract": "Methods: 30 male soccer players (mean age 22) were randomized. Results: Power output increased."
-        },
-        {
-            "id": "222",
-            "title": "Effects of creatine in the elderly",
-            "abstract": "We studied 50 women aged 60-75. No significant changes were found in muscle mass."
+            "abstract": "Methods: 30 male soccer players (mean age 22) were randomized."
         }
     ]
     
     print("Testing Extractor...")
     results = extract_metadata(mock_studies)
-    print(json.dumps(results, indent=2))
+    
+    # Check if Title survived
+    if results and "title" in results[0]:
+        print("SUCCESS: Title was preserved!")
+        print(results[0]["title"])
+    else:
+        print("FAILURE: Title is missing.")
