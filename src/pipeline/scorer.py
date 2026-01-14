@@ -10,7 +10,7 @@ def score_studies(studies, user_age, goal="general"):
     keywords = {
         "strength": ["muscle", "hypertrophy", "strength", "power", "sprint", "athletic", "exercise", "resistance", "anaerobic"],
         "cognition": ["memory", "brain", "cognitive", "depression", "anxiety", "mood", "mental", "neuro", "focus", "attention"],
-        "general": [] # General goal relies purely on study quality/age
+        "general": [] # relies purely on study quality/age
     }
     
     target_keywords = keywords.get(goal, [])
