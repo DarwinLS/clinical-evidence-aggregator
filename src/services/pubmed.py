@@ -9,21 +9,29 @@ load_dotenv()
 Entrez.email = os.getenv("EMAIL", "your_email@example.com") 
 Entrez.tool = "ClinicalSynthMVP"
 
-"""
-Step 1: Get the PMIDs of relevant studies
-Query Strategy:
-- Search for the supplement name
-- Filter for 'Clinical Trial' or 'Randomized Controlled Trial'
-- Filter for 'Humans'
-- Language: English
-"""
 def search_pubmed(supplement: str, max_results: int = 20):
+    """
+    Step 1: Get the PMIDs of relevant studies
+    Query Strategy:
+    - Quote the supplement to avoid partial matches (e.g. "Beta" in Beta-Blockers).
+    - Restrict to [Title/Abstract] to ensure relevance.
+    - Include Meta-Analyses and Systematic Reviews.
+    """
     
-    search_term = (
-        f"{supplement} AND "
-        "(Clinical Trial[Publication Type] OR Randomized Controlled Trial[Publication Type]) "
-        "AND Humans[Mesh] AND English[lang]"
+    # 1. QUOTES: Force exact phrase match ("Beta Alanine" vs Beta AND Alanine)
+    # 2. FIELDS: Look in Title/Abstract to avoid random mentions in full text
+    term_part = f'"{supplement}"[Title/Abstract]'
+    
+    # 3. TYPES: Expand to include high-quality review papers
+    type_part = (
+        "(Meta-Analysis[Publication Type] OR "
+        "Systematic Review[Publication Type] OR "
+        "Clinical Trial[Publication Type] OR "
+        "Randomized Controlled Trial[Publication Type])"
     )
+    
+    # Combined Query
+    search_term = f"{term_part} AND {type_part} AND Humans[Mesh] AND English[lang]"
 
     try:
         # esearch: searches PubMed and returns IDs
@@ -31,7 +39,7 @@ def search_pubmed(supplement: str, max_results: int = 20):
             db="pubmed",
             term=search_term,
             retmax=max_results,
-            sort="relevance" # can be "date" if we want newest
+            sort="relevance" 
         )
         record = Entrez.read(handle)
         handle.close()
@@ -48,11 +56,10 @@ def search_pubmed(supplement: str, max_results: int = 20):
         print(f"Error searching PubMed: {e}")
         return []
 
-"""
-Step 2: Given a list of IDs, fetch the actual Title, Abstract, and Metadata
-"""
 def fetch_details(id_list):
-
+    """
+    Step 2: Given a list of IDs, fetch the actual Title, Abstract, and Metadata
+    """
     ids = ",".join(id_list)
     
     try:
@@ -96,7 +103,9 @@ def fetch_details(id_list):
                     "title": title,
                     "abstract": abstract,
                     "year": year,
-                    "journal": journal.get('Title', 'N/A')
+                    "journal": journal.get('Title', 'N/A'),
+                    # Note: We rely on the Extractor (LLM) to determine "study_type" 
+                    # accurately from the abstract later, rather than parsing strict XML types here.
                 })
                 
             except Exception as parse_error:

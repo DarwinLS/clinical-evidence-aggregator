@@ -41,8 +41,8 @@ def synthesize_report(supplement, user_age, ranked_studies, goal="general"):
     context_text = ""
     print(f"\nDEBUG: SYNTHESIZER CONTEXT CHECK")
     for study in ranked_studies:
-        print(f" - Feeding Study: {study['id']} | Title: {study['title'][:30]}...")
-        
+        print(f" - Feeding Study: {study['id']} | Title: {study['title']}...")
+
         raw_abstract = study.get('abstract', 'No abstract available.')
         
         context_text += f"""
