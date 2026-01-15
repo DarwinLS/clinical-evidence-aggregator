@@ -57,6 +57,11 @@ def extract_metadata(studies):
             temperature=0 
         )
 
+        # --- TOKEN DEBUGGING ---
+        usage = response.usage
+        print(f"DEBUG [Extractor]: Input Tokens: {usage.prompt_tokens} | Output Tokens: {usage.completion_tokens} | Total: {usage.total_tokens}")
+        # -----------------------
+
         # 3. Parse LLM Output
         raw_json = response.choices[0].message.content
         parsed_data = json.loads(raw_json)

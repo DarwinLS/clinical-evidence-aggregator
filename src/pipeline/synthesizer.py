@@ -75,6 +75,11 @@ def synthesize_report(supplement, user_age, ranked_studies, goal="general"):
             temperature=0.2
         )
 
+        # --- TOKEN DEBUGGING ---
+        usage = response.usage
+        print(f"DEBUG [Synthesizer]: Input Tokens: {usage.prompt_tokens} | Output Tokens: {usage.completion_tokens} | Total: {usage.total_tokens}")
+        # -----------------------
+
         return json.loads(response.choices[0].message.content)
 
     except Exception as e:
