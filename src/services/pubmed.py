@@ -5,18 +5,18 @@ from dotenv import load_dotenv
 # load environment variables
 load_dotenv()
 
-# NCBI requires email and tool name for API access
+# Email and tool name for NBCI API access
 Entrez.email = os.getenv("EMAIL", "your_email@example.com") 
 Entrez.tool = "ClinicalSynthMVP"
 
+"""
+Step 1: Get PMIDs of relevant studies
+Query Strategy:
+- Quote the supplement to avoid partial matches (e.g. "Beta" in Beta-Blockers).
+- Restrict to [Title/Abstract] to ensure relevance.
+- Include Meta-Analyses and Systematic Reviews.
+"""
 def search_pubmed(supplement: str, max_results: int = 20):
-    """
-    Step 1: Get the PMIDs of relevant studies
-    Query Strategy:
-    - Quote the supplement to avoid partial matches (e.g. "Beta" in Beta-Blockers).
-    - Restrict to [Title/Abstract] to ensure relevance.
-    - Include Meta-Analyses and Systematic Reviews.
-    """
     
     # 1. QUOTES: Force exact phrase match ("Beta Alanine" vs Beta AND Alanine)
     # 2. FIELDS: Look in Title/Abstract to avoid random mentions in full text
@@ -56,10 +56,11 @@ def search_pubmed(supplement: str, max_results: int = 20):
         print(f"Error searching PubMed: {e}")
         return []
 
+"""
+Step 2: Given a list of IDs, fetch the actual Title, Abstract, and Metadata
+"""
 def fetch_details(id_list):
-    """
-    Step 2: Given a list of IDs, fetch the actual Title, Abstract, and Metadata
-    """
+
     ids = ",".join(id_list)
     
     try:
