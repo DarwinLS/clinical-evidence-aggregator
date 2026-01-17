@@ -3,72 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clinical Evidence MVP</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>Clinical Evidence Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css?v=3">
 </head>
 <body>
 
     <main class="container">
+        
         <header>
-            <h1>Clinical Evidence Aggregator</h1>
+            <h1>Clinical Data Synth</h1>
+            <p class="subtitle">PubMed-verified synthesis without the hallucinations.</p>
         </header>
         
-        <section class="search-section">
-            <form action="/analyze" method="post" class="search-box">
-                <input type="text" name="supplement" placeholder="Supplement (e.g. Creatine)" required value="{{ search_term }}">
+        <section class="search-card">
+            <form action="/analyze" method="post" class="search-form" onsubmit="document.getElementById('loader').style.display='block'">
+    
+                <div class="form-row-main">
+                    <input type="text" name="supplement" placeholder="Enter Supplement (e.g. Creatine Monohydrate)" required value="{{ search_term or '' }}">
+                </div>
                 
-                <input type="number" name="age" placeholder="Age" required style="width: 80px;" value="{{ search_age }}">
-                
-                <select name="goal" style="padding: 10px; border-radius: 6px; border: 1px solid #ddd;">
-                    <option value="general" {% if search_goal == 'general' %}selected{% endif %}>General Health</option>
-                    <option value="strength" {% if search_goal == 'strength' %}selected{% endif %}>Strength & Hypertrophy</option>
-                    <option value="cognition" {% if search_goal == 'cognition' %}selected{% endif %}>Brain & Cognition</option>
-                </select>
+                <div class="form-row-secondary">
+                    <input type="number" name="age" placeholder="Age" required min="1" max="120" value="{{ search_age or '' }}">
+                    
+                    <select name="goal">
+                        <option value="general" {% if search_goal == 'general' %}selected{% endif %}>General Health</option>
+                        <option value="strength" {% if search_goal == 'strength' %}selected{% endif %}>Strength & Hypertrophy</option>
+                        <option value="cognition" {% if search_goal == 'cognition' %}selected{% endif %}>Brain & Cognition</option>
+                        <option value="sleep" {% if search_goal == 'sleep' %}selected{% endif %}>Sleep Quality</option>
+                    </select>
 
-                <button type="submit">Generate Report</button>
+                    <button type="submit" class="btn-primary">Generate Report</button>
+                </div>
+
             </form>
 
+            <div id="loader" style="display:none; text-align:center; margin-top:20px; color: var(--secondary);">
+                <small>Analyzing PubMed studies... this may take 20-30 seconds.</small>
+            </div>
+
             {% if error %}
-            <div style="background: #ffebee; color: #c62828; padding: 15px; border-radius: 8px; margin-top: 20px;">
-                <strong>Error:</strong> {{ error }}
+            <div class="error-box">
+                <strong>Analysis Failed:</strong> {{ error }}
             </div>
             {% endif %}
         </section>
 
         {% if result %}
-        <article class="report">
-            <header>
-                <h2>Report for: <span class="highlight">{{ result.supplement }}</span></h2>
-                <p class="demographic">Target Demographic: {{ result.demographic }}</p>
-            </header>
+        <article class="report-container">
             
-            <div class="evidence-grid">
+            <div class="report-header">
+                <div class="report-title">
+                    <h2>{{ result.supplement }}</h2>
+                </div>
+                <div class="badges">
+                    <span class="badge">Age: {{ search_age }}</span>
+                    <span class="badge">Goal: {{ search_goal|capitalize }}</span>
+                </div>
+            </div>
+            
+            <div class="evidence-section">
                 {% for section in result.summary %}
-                <article class="card">
-                    <h3>{{ section.topic }}</h3>
-                    <p>
-                        {{ section.text }}
+    
+                {% set t = section.topic|lower %}
+                {% set border_class = 'border-blue' %} 
+                
+                {% if 'effic' in t or 'benefit' in t %}
+                    {% set border_class = 'border-green' %}
+                {% elif 'dos' in t or 'usage' in t or 'admin' in t %}
+                    {% set border_class = 'border-purple' %}
+                {% elif 'side' in t or 'risk' in t or 'safe' in t or 'adverse' in t %}
+                    {% set border_class = 'border-red' %}
+                {% endif %}
+
+                <article class="card {{ border_class }}">
+                    <h3>
+                        {% if border_class == 'border-green' %} <span>📈</span>
+                        {% elif border_class == 'border-purple' %} <span>💊</span>
+                        {% elif border_class == 'border-red' %} <span>⚠️</span>
+                        {% else %} <span>📋</span>
+                        {% endif %}
                         
+                        {{ section.topic }}
+                    </h3>
+                    
+                    <div class="card-text">
+                        {{ section.text }}
                         {% for id in section.citation_ids %}
-                            {% if study_lookup[id] %}
-                                <span class="citation-tooltip" 
-                                      data-tooltip="{{ study_lookup[id].study_type }}, n={{ study_lookup[id].n }}">
-                                    [{{ id }}]
-                                </span>
-                            {% else %}
-                                <span class="citation-tooltip" data-tooltip="Source ID: {{ id }}">
-                                    [{{ id }}]
-                                </span>
-                            {% endif %}
+                            <a href="#ref-{{ citation_map[id] }}" class="cite-ref" title="Go to Reference">
+                                {{ citation_map[id] }}
+                            </a>
                         {% endfor %}
-                    </p>
+                    </div>
                 </article>
                 {% endfor %}
             </div>
+
+            {% if bibliography %}
+            <section class="references-container">
+                <h3>References & Clinical Data</h3>
+                <ol class="ref-list">
+                    {% for study in bibliography %}
+                    <li id="ref-{{ loop.index }}" class="ref-item">
+                        <span class="ref-title">{{ study.title }}</span>
+                        <div class="ref-meta">
+                            <span><strong>{{ study.journal }}</strong> ({{ study.year }})</span>
+                            <span>Type: {{ study.study_type }}</span>
+                            <span>n={{ study.n }}</span>
+                            <a href="https://pubmed.ncbi.nlm.nih.gov/{{ study.id }}/" target="_blank" class="pubmed-link">
+                                PubMed {{ study.id }} ↗
+                            </a>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ol>
+            </section>
+            {% endif %}
+
         </article>
         {% endif %}
 
     </main>
-
 </body>
 </html>
