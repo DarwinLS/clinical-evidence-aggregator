@@ -27,7 +27,7 @@ def load_prompt_template(goal):
         return f.read()
 
 """
-Step 5 - The Writer LLM:
+Step 3 - The Writer LLM:
 Supports Dynamic Goals (Current: General, Strength, Cognition)
 """
 def synthesize_report(supplement, user_age, ranked_studies, goal="general"):

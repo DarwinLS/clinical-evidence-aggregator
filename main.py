@@ -7,8 +7,7 @@ import logging
 
 # IMPORT PIPELINE MODULES
 from src.services.pubmed import search_pubmed
-from src.pipeline.extractor import extract_metadata
-from src.pipeline.scorer import score_studies
+from src.pipeline.selector import select_best_studies
 from src.pipeline.synthesizer import synthesize_report
 
 # Configure logging so you can see what's happening in the terminal
@@ -46,11 +45,11 @@ async def analyze_supplement(
     if raw_studies is None: 
          return render_error(request, "No studies found.", supplement, age, goal)
 
-    # 2. EXTRACT
-    extracted_data = extract_metadata(raw_studies)
+    # 2. CURATE
+    top_studies = select_best_studies(raw_studies, user_age=age, goal=goal)
 
-    # 3. SCORE & FILTER
-    top_studies = score_studies(extracted_data, user_age=age, goal=goal)
+    if not top_studies:
+        return render_error(request, "No relevant studies found after curation.", supplement, age, goal)
 
     # 4. SYNTHESIZE
     final_report = synthesize_report(supplement, age, top_studies, goal=goal)
