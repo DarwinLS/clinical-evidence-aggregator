@@ -131,6 +131,7 @@ This MVP is configured for **Render** Web Services.
             ├── general.txt
             ├── strength.txt
             └── cognition.txt
+```
 
 ## 🔮 Future Roadmap
 
